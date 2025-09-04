@@ -34,3 +34,5 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+
+//O código de estoque não está sendo utilizado mais, pois o estoque está sendo tratado na própria tabela de produtos
