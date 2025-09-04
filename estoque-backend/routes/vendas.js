@@ -39,7 +39,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 //Buscar vendas do mês
-router.get("/mensal", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { ano, mes } = req.query;
 

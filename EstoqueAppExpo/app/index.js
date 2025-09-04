@@ -81,6 +81,14 @@ export default function Home() {
         <Text style={styles.buttonText}>Deletar Produtos</Text>
       </Pressable>
 
+      <Pressable
+        style={[styles.button, isLoading && styles.disabledButton]}
+        disabled={isLoading}
+        onPress={() => handleNavigation('/relatorio')}
+      >
+        <Text style={styles.buttonText}>Relatório Mensal de Vendas</Text>
+      </Pressable>
+
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
