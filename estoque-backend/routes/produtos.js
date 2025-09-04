@@ -23,4 +23,47 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Atualizar estoque de um produto
+router.put('/:id/estoque', async (req, res) => {
+  try {
+    const { estoque } = req.body; // valor que você vai mandar no body
+
+    // Verifica se o campo estoque foi enviado
+    if (estoque === undefined) {
+      return res.status(400).json({ erro: 'O campo estoque é obrigatório.' });
+    }
+
+    // Atualiza somente o campo estoque
+    const produtoAtualizado = await Produto.findByIdAndUpdate(
+      req.params.id,
+      { $set: { estoque } },
+      { new: true, runValidators: true } // retorna o doc atualizado e valida
+    );
+
+    if (!produtoAtualizado) {
+      return res.status(404).json({ erro: 'Produto não encontrado.' });
+    }
+
+    res.json(produtoAtualizado);
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+// Excluir um produto
+router.delete('/:id', async (req, res) => {
+  try {
+    const produtoRemovido = await Produto.findByIdAndDelete(req.params.id);
+
+    if (!produtoRemovido) {
+      return res.status(404).json({ erro: 'Produto não encontrado.' });
+    }
+
+    res.json({ mensagem: 'Produto excluído com sucesso!', produto: produtoRemovido });
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+});
+
+
 module.exports = router;

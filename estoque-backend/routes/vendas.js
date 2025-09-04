@@ -23,4 +23,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Excluir uma venda
+router.delete('/:id', async (req, res) => {
+  try {
+    const vendaRemovida = await Venda.findByIdAndDelete(req.params.id);
+
+    if (!vendaRemovida) {
+      return res.status(404).json({ erro: 'Venda não encontrado.' });
+    }
+
+    res.json({ mensagem: 'Venda excluída com sucesso!', venda: vendaRemovida });
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+});
+
 module.exports = router;
