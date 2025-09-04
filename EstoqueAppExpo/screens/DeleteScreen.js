@@ -7,10 +7,12 @@ import { API_URL } from '../constants/api';
 export default function DeleteScreen() {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null); // controla produto sendo excluído
 
   // Buscar produtos
   const fetchProdutos = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API_URL}/produtos`);
       setProdutos(response.data);
     } catch (error) {
@@ -27,12 +29,15 @@ export default function DeleteScreen() {
   // Função para excluir produto
   const excluirProduto = async (id) => {
     try {
+      setDeletingId(id);
       await axios.delete(`${API_URL}/produtos/${id}`);
       Alert.alert('Sucesso', 'Produto excluído com sucesso!');
       fetchProdutos(); // Recarrega a lista
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
       Alert.alert('Erro', 'Não foi possível excluir o produto.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -70,12 +75,19 @@ export default function DeleteScreen() {
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <Pressable
-            style={styles.card}
-            onPress={() => confirmarExclusao(item._id, item.nome)}
+            style={[styles.card, deletingId === item._id && { opacity: 0.5 }]}
+            onPress={() => (deletingId ? null : confirmarExclusao(item._id, item.nome))}
+            disabled={!!deletingId}
           >
-            <Text style={styles.nome}>{item.nome}</Text>
-            <Text style={styles.text}>Estoque: {item.estoque}</Text>
-            <Text style={styles.text}>Preço: R$ {item.preco.toFixed(2)}</Text>
+            {deletingId === item._id ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.nome}>{item.nome}</Text>
+                <Text style={styles.text}>Estoque: {item.estoque}</Text>
+                <Text style={styles.text}>Preço: R$ {item.preco.toFixed(2)}</Text>
+              </>
+            )}
           </Pressable>
         )}
       />
@@ -100,6 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     elevation: 3,
+    alignItems: 'center',
   },
   nome: {
     fontSize: 18,

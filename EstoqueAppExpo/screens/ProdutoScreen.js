@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Text, Pressable } from 'react-native';
+import { View, TextInput, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 import { API_URL } from '../constants/api';
@@ -10,13 +10,17 @@ export default function ProdutoScreen() {
   const [preco, setPreco] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [loading, setLoading] = useState(false); // novo estado para loading
 
   const salvarProduto = async () => {
+    if (loading) return; // impede cliques múltiplos
+    setLoading(true);
     setMessage('');
     setIsSuccess(false);
 
     if (!nome || !preco) {
       setMessage('Preencha nome e preço');
+      setLoading(false);
       return;
     }
 
@@ -25,7 +29,7 @@ export default function ProdutoScreen() {
         nome,
         descricao,
         preco: Number(preco),
-        estoque: 0
+        estoque: 0,
       });
 
       setMessage(`Produto ${res.data.nome} salvo com sucesso!`);
@@ -37,24 +41,26 @@ export default function ProdutoScreen() {
       console.error(err);
       setMessage('Não foi possível salvar o produto');
       setIsSuccess(false);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={
-        {
+      <Stack.Screen
+        options={{
           headerStyle: {
             backgroundColor: '#423101',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 3 },
             shadowOpacity: 0.3,
             shadowRadius: 4,
-            elevation: 5
+            elevation: 5,
           },
-          title: 'Cadastrar Produto'
-        }
-      } />
+          title: 'Cadastrar Produto',
+        }}
+      />
 
       {message ? (
         <View style={[styles.messageBox, isSuccess ? styles.successBox : styles.errorBox]}>
@@ -84,8 +90,17 @@ export default function ProdutoScreen() {
         keyboardType="numeric"
         placeholderTextColor="#ccc"
       />
-      <Pressable style={styles.button} onPress={salvarProduto}>
-        <Text style={styles.buttonText}>Salvar Produto</Text>
+
+      <Pressable
+        style={[styles.button, loading && styles.disabledButton]}
+        onPress={salvarProduto}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Salvar Produto</Text>
+        )}
       </Pressable>
     </View>
   );
@@ -122,6 +137,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   buttonText: {
     color: 'white',

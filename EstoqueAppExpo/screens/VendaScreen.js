@@ -6,7 +6,8 @@ import { API_URL } from '../constants/api';
 
 export default function VendaScreen() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // para carregar lista
+  const [isSubmitting, setIsSubmitting] = useState(false); // para envio do form
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantidade, setQuantidade] = useState('');
   const [total, setTotal] = useState('');
@@ -55,6 +56,8 @@ export default function VendaScreen() {
     }
 
     try {
+      setIsSubmitting(true);
+
       // registra a venda
       await axios.post(`${API_URL}/vendas`, {
         produto: selectedProduct._id,
@@ -82,6 +85,8 @@ export default function VendaScreen() {
       console.error(err);
       setMessage('Não foi possível registrar a venda');
       setIsSuccess(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -148,10 +153,24 @@ export default function VendaScreen() {
             keyboardType="numeric"
             placeholderTextColor="#888"
           />
-          <Pressable style={styles.button} onPress={cadastrarVenda}>
-            <Text style={styles.buttonText}>Finalizar Venda</Text>
+
+          <Pressable
+            style={[styles.button, isSubmitting && { opacity: 0.6 }]}
+            onPress={cadastrarVenda}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Finalizar Venda</Text>
+            )}
           </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={() => setIsProductListVisible(true)}>
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => setIsProductListVisible(true)}
+            disabled={isSubmitting}
+          >
             <Text style={styles.secondaryButtonText}>Voltar para a Lista</Text>
           </Pressable>
         </View>

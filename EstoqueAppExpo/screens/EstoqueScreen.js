@@ -7,7 +7,8 @@ import { API_URL } from '../constants/api';
 export default function EstoqueScreen() {
   const [isProductListVisible, setIsProductListVisible] = useState(true);
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // carregando lista
+  const [saving, setSaving] = useState(false); // carregando atualização de estoque
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantidade, setQuantidade] = useState('');
   const [message, setMessage] = useState('');
@@ -36,38 +37,39 @@ export default function EstoqueScreen() {
   };
 
   const adicionarEstoque = async () => {
-  setMessage('');
-  setIsSuccess(false);
-
-  if (!selectedProduct || !quantidade) {
-    setMessage('Selecione um produto e preencha a quantidade');
-    return;
-  }
-
-  try {
-    // Calcula novo estoque (estoque atual + quantidade digitada)
-    const novoEstoque = (selectedProduct.estoque || 0) + Number(quantidade);
-
-    // Chama PUT no backend
-    const res = await axios.put(`${API_URL}/produtos/${selectedProduct._id}/estoque`, {
-      estoque: novoEstoque
-    });
-
-    setMessage('Estoque atualizado com sucesso!');
-    setIsSuccess(true);
-    setQuantidade('');
-    setSelectedProduct(null);
-    setIsProductListVisible(true);
-
-    fetchProducts(); // atualiza a lista de produtos com o novo estoque
-  } catch (err) {
-    console.error(err);
-    setMessage('Não foi possível atualizar o estoque');
+    if (saving) return; // evita múltiplos cliques
+    setSaving(true);
+    setMessage('');
     setIsSuccess(false);
-  }
-};
 
+    if (!selectedProduct || !quantidade) {
+      setMessage('Selecione um produto e preencha a quantidade');
+      setSaving(false);
+      return;
+    }
 
+    try {
+      const novoEstoque = (selectedProduct.estoque || 0) + Number(quantidade);
+
+      await axios.put(`${API_URL}/produtos/${selectedProduct._id}/estoque`, {
+        estoque: novoEstoque,
+      });
+
+      setMessage('Estoque atualizado com sucesso!');
+      setIsSuccess(true);
+      setQuantidade('');
+      setSelectedProduct(null);
+      setIsProductListVisible(true);
+
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      setMessage('Não foi possível atualizar o estoque');
+      setIsSuccess(false);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const renderProductItem = ({ item }) => (
     <Pressable style={styles.productItem} onPress={() => handleProductSelect(item)}>
@@ -78,19 +80,19 @@ export default function EstoqueScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={
-        {
+      <Stack.Screen
+        options={{
           headerStyle: {
             backgroundColor: '#423101',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 3 },
             shadowOpacity: 0.3,
             shadowRadius: 4,
-            elevation: 5
+            elevation: 5,
           },
-          title: 'Adicionar Estoque'
-        }
-      } />
+          title: 'Adicionar Estoque',
+        }}
+      />
 
       {message ? (
         <View style={[styles.messageBox, isSuccess ? styles.successBox : styles.errorBox]}>
@@ -104,7 +106,7 @@ export default function EstoqueScreen() {
         <FlatList
           data={products}
           renderItem={renderProductItem}
-          keyExtractor={item => item._id}
+          keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContainer}
         />
       ) : (
@@ -124,8 +126,16 @@ export default function EstoqueScreen() {
             keyboardType="numeric"
             placeholderTextColor="#888"
           />
-          <Pressable style={styles.button} onPress={adicionarEstoque}>
-            <Text style={styles.buttonText}>Adicionar Estoque</Text>
+          <Pressable
+            style={[styles.button, saving && styles.disabledButton]}
+            onPress={adicionarEstoque}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Adicionar Estoque</Text>
+            )}
           </Pressable>
           <Pressable style={styles.secondaryButton} onPress={() => setIsProductListVisible(true)}>
             <Text style={styles.secondaryButtonText}>Voltar para a Lista</Text>
@@ -202,6 +212,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   buttonText: {
     color: 'white',
