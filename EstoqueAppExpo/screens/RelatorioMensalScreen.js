@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, Picker, Pressable } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, Pressable } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 import { API_URL } from '../constants/api';
@@ -12,8 +13,7 @@ export default function RelatorioMensalScreen() {
   const [faturamentoTotal, setFaturamentoTotal] = useState(0);
   const [produtoMaisVendido, setProdutoMaisVendido] = useState(null);
 
-  const anosDisponiveis = [2023, 2024, 2025]; // você pode gerar dinamicamente
-
+  const anosDisponiveis = [2023, 2024, 2025];
   const meses = [
     { label: 'Janeiro', value: 1 },
     { label: 'Fevereiro', value: 2 },
@@ -32,27 +32,28 @@ export default function RelatorioMensalScreen() {
   const fetchVendasMensais = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/vendas/?ano=${ano}&mes=${mes}`);
+      const response = await axios.get(`${API_URL}/vendas/relatorio-mensal?ano=${ano}&mes=${mes}`);
       const dados = response.data;
-
       setVendas(dados);
 
-      // Cálculo do faturamento total
-      const total = dados.reduce((acc, item) => acc + item.totalVendido, 0);
+      // Cálculo do faturamento total a partir dos dados agregados
+      const total = dados.reduce((acc, item) => acc + (item.totalVendido || 0), 0);
       setFaturamentoTotal(total);
 
-      // Produto mais vendido
+      // Encontrar o produto mais vendido a partir dos dados agregados
       if (dados.length > 0) {
-        const maisVendido = dados.reduce((prev, current) => 
-          prev.quantidadeVendida > current.quantidadeVendida ? prev : current
+        const maisVendido = dados.reduce((prev, current) =>
+          (prev?.quantidadeVendida || 0) > (current?.quantidadeVendida || 0) ? prev : current
         );
-        setProdutoMaisVendido(maisVendido.produto.nome);
+        setProdutoMaisVendido(maisVendido?.produto?.nome);
       } else {
         setProdutoMaisVendido(null);
       }
-
     } catch (error) {
       console.error('Erro ao buscar vendas mensais:', error);
+      setVendas([]);
+      setFaturamentoTotal(0);
+      setProdutoMaisVendido(null);
     } finally {
       setLoading(false);
     }
@@ -73,35 +74,39 @@ export default function RelatorioMensalScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Relatório Mensal',
           headerStyle: { backgroundColor: '#423101' },
           headerTintColor: '#fff',
-        }} 
+        }}
       />
 
       {/* Filtros */}
       <View style={styles.filtros}>
-        <Picker
-          selectedValue={ano}
-          style={styles.picker}
-          onValueChange={(value) => setAno(value)}
-        >
-          {anosDisponiveis.map((a) => (
-            <Picker.Item key={a} label={`${a}`} value={a} />
-          ))}
-        </Picker>
+        {/* Picker do Ano */}
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={ano}
+            onValueChange={(value) => setAno(value)}
+          >
+            {anosDisponiveis.map((a) => (
+              <Picker.Item key={a} label={`${a}`} value={a} />
+            ))}
+          </Picker>
+        </View>
 
-        <Picker
-          selectedValue={mes}
-          style={styles.picker}
-          onValueChange={(value) => setMes(value)}
-        >
-          {meses.map((m) => (
-            <Picker.Item key={m.value} label={m.label} value={m.value} />
-          ))}
-        </Picker>
+        {/* Picker do Mês */}
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={mes}
+            onValueChange={(value) => setMes(value)}
+          >
+            {meses.map((m) => (
+              <Picker.Item key={m.value} label={m.label} value={m.value} />
+            ))}
+          </Picker>
+        </View>
 
         <Pressable style={styles.button} onPress={fetchVendasMensais}>
           <Text style={styles.buttonText}>Filtrar</Text>
@@ -110,7 +115,9 @@ export default function RelatorioMensalScreen() {
 
       {/* Faturamento e Produto Mais Vendido */}
       <View style={styles.resumo}>
-        <Text style={styles.resumoText}>Faturamento Total: R$ {faturamentoTotal.toFixed(2)}</Text>
+        {typeof faturamentoTotal === 'number' && (
+          <Text style={styles.resumoText}>Faturamento Total: R$ {faturamentoTotal.toFixed(2)}</Text>
+        )}
         {produtoMaisVendido && (
           <Text style={styles.resumoText}>Produto Mais Vendido: {produtoMaisVendido}</Text>
         )}
@@ -119,12 +126,12 @@ export default function RelatorioMensalScreen() {
       {/* Lista de produtos vendidos */}
       <FlatList
         data={vendas}
-        keyExtractor={(item) => item.produto._id}
+        keyExtractor={(item) => item.produto?._id || Math.random().toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.nome}>{item.produto.nome}</Text>
-            <Text style={styles.text}>Quantidade Vendida: {item.quantidadeVendida}</Text>
-            <Text style={styles.text}>Total Vendido: R$ {item.totalVendido.toFixed(2)}</Text>
+            <Text style={styles.nome}>{item.produto?.nome || 'Produto Desconhecido'}</Text>
+            <Text style={styles.text}>Quantidade Vendida: {item.quantidadeVendida || 0}</Text>
+            <Text style={styles.text}>Total Vendido: R$ {typeof item.totalVendido === 'number' ? item.totalVendido.toFixed(2) : '0.00'}</Text>
           </View>
         )}
       />
@@ -149,12 +156,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     alignItems: 'center',
   },
-  picker: {
+  pickerContainer: {
     height: 50,
     flex: 1,
-    color: '#fff',
     backgroundColor: '#7a6b40',
     borderRadius: 8,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   button: {
     backgroundColor: '#423101',
